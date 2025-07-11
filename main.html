@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CS2048 - The Programmer's Edition</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @keyframes tile-appear {
+            0% { transform: scale(0); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+        
+        @keyframes tile-merge {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+            100% { transform: scale(1); }
+        }
+        
+        .tile-new {
+            animation: tile-appear 0.2s ease-in-out;
+        }
+        
+        .tile-merged {
+            animation: tile-merge 0.2s ease-in-out;
+        }
+        
+        .code-bg {
+            background-color: #1e1e1e;
+            background-image: 
+                linear-gradient(rgba(50, 50, 50, 0.5) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(50, 50, 50, 0.5) 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+        
+        .console-font {
+            font-family: 'Courier New', monospace;
+        }
+        
+        .scrollbar-custom::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        .scrollbar-custom::-webkit-scrollbar-track {
+            background: #2d3748;
+        }
+        
+        .scrollbar-custom::-webkit-scrollbar-thumb {
+            background: #4a5568;
+            border-radius: 4px;
+        }
+        
+        .scrollbar-custom::-webkit-scrollbar-thumb:hover {
+            background: #718096;
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-white min-h-screen flex flex-col items-center justify-center p-4 code-bg">
+    <div class="w-full max-w-3xl mx-auto">
+        <!-- Header -->
+        <header class="flex flex-col md:flex-row justify-between items-center mb-6 p-4 bg-gray-800 rounded-lg border border-gray-700">
+            <div class="text-center md:text-left mb-4 md:mb-0">
+                <h1 class="text-3xl font-bold text-green-400 console-font">CS2048</h1>
+                <p class="text-gray-400 console-font">The Programmer's Edition</p>
+            </div>
+            
+            <div class="flex flex-col md:flex-row gap-4">
+                <div class="bg-gray-700 p-3 rounded-lg text-center border border-gray-600">
+                    <p class="text-gray-300 text-sm console-font">SCORE</p>
+                    <p id="score" class="text-xl font-bold text-white">0</p>
+                </div>
+                <div class="bg-gray-700 p-3 rounded-lg text-center border border-gray-600">
+                    <p class="text-gray-300 text-sm console-font">BEST</p>
+                    <p id="best-score" class="text-xl font-bold text-white">0</p>
+                </div>
+            </div>
+        </header>
+
+        <div id="username-modal" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-75 z-50 p-4">
+            <div class="bg-gray-800 rounded-lg p-6 max-w-md w-full border border-green-500">
+                <h2 class="text-2xl font-bold text-green-400 mb-4 console-font">Enter Your Hacker Name</h2>
+                <input type="text" id="username-input" class="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white mb-4 console-font focus:border-green-500 focus:outline-none" placeholder="e.g. code_ninja" autocomplete="off">
+                <div class="flex justify-between">
+                    <button id="start-game-btn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition console-font">
+                        <i class="fas fa-play mr-2"></i> Start Coding
+                    </button>
+                    <button id="view-leaderboard-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition console-font">
+                        <i class="fas fa-trophy mr-2"></i> View Leaderboard
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div id="leaderboard-modal" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-75 z-50 p-4 hidden">
+            <div class="bg-gray-800 rounded-lg p-6 max-w-md w-full border border-blue-500">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-2xl font-bold text-blue-400 console-font">Top Coders</h2>
+                    <button id="close-leaderboard-btn" class="text-gray-400 hover:text-white">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div id="leaderboard-list" class="max-h-96 overflow-y-auto scrollbar-custom mb-4">
+                </div>
+                <button id="back-to-game-btn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition console-font">
+                    <i class="fas fa-arrow-left mr-2"></i> Back to Game
+                </button>
+            </div>
+        </div>
+
+        <div id="game-over-modal" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-75 z-50 p-4 hidden">
+            <div class="bg-gray-800 rounded-lg p-6 max-w-md w-full border border-red-500">
+                <h2 class="text-2xl font-bold text-red-400 mb-2 console-font">Game Over!</h2>
+                <p class="text-gray-300 mb-4 console-font">Your final score: <span id="final-score" class="text-white font-bold">0</span></p>
+                <div class="flex flex-col gap-2">
+                    <button id="restart-game-btn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition console-font">
+                        <i class="fas fa-redo mr-2"></i> Try Again
+                    </button>
+                    <button id="leaderboard-from-game-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition console-font">
+                        <i class="fas fa-trophy mr-2"></i> View Leaderboard
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div id="game-container" class="hidden">
+            <div class="grid grid-cols-4 gap-3 p-4 bg-gray-800 rounded-lg border border-gray-700 mb-4">
+            </div>
+            
+            <div class="flex justify-between mb-6">
+                <button id="new-game-btn" class="bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg transition console-font">
+                    <i class="fas fa-sync-alt mr-2"></i> New Game
+                </button>
+                <div class="text-gray-400 console-font">
+                    <span id="current-username" class="text-green-400"></span>@cs2048:~$
+                </div>
+            </div>
+            
+            <div class="bg-gray-800 rounded-lg p-4 border border-gray-700 mb-4">
+                <h3 class="text-lg font-bold text-yellow-400 mb-2 console-font">How to Play:</h3>
+                <ul class="list-disc list-inside text-gray-300 console-font">
+                    <li>Use arrow keys or swipe to move tiles</li>
+                    <li>Combine matching tiles to create higher values</li>
+                    <li>Reach the 2048 tile to win (but keep going!)</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="bg-black bg-opacity-50 rounded-lg p-3 border border-gray-700 mt-4 hidden md:block">
+            <div class="flex items-center mb-2">
+                <div class="flex gap-2 mr-3">
+                    <div class="w-3 h-3 rounded-full bg-red-500"></div>
+                    <div class="w-3 h-3 rounded-full bg-yellow-500"></div>
+                    <div class="w-3 h-3 rounded-full bg-green-500"></div>
+                </div>
+                <span class="text-gray-400 console-font">debug-console.log</span>
+            </div>
+            <div id="debug-console" class="h-20 overflow-y-auto text-green-400 text-sm console-font scrollbar-custom">
+                <div>> Initializing CS2048 game engine...</div>
+                <div>> Loading user profile...</div>
+                <div>> Ready for player input...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            let grid = [];
+            let score = 0;
+            let bestScore = localStorage.getItem('bestScore') || 0;
+            let username = '';
+            let gameOver = false;
+            let leaderboard = JSON.parse(localStorage.getItem('leaderboard')) || [];
+            
+            const gameContainer = document.getElementById('game-container');
+            const gameGrid = document.querySelector('#game-container .grid');
+            const scoreElement = document.getElementById('score');
+            const bestScoreElement = document.getElementById('best-score');
+            const usernameModal = document.getElementById('username-modal');
+            const usernameInput = document.getElementById('username-input');
+            const startGameBtn = document.getElementById('start-game-btn');
+            const viewLeaderboardBtn = document.getElementById('view-leaderboard-btn');
+            const leaderboardModal = document.getElementById('leaderboard-modal');
+            const leaderboardList = document.getElementById('leaderboard-list');
+            const closeLeaderboardBtn = document.getElementById('close-leaderboard-btn');
+            const backToGameBtn = document.getElementById('back-to-game-btn');
+            const gameOverModal = document.getElementById('game-over-modal');
+            const finalScoreElement = document.getElementById('final-score');
+            const restartGameBtn = document.getElementById('restart-game-btn');
+            const leaderboardFromGameBtn = document.getElementById('leaderboard-from-game-btn');
+            const newGameBtn = document.getElementById('new-game-btn');
+            const currentUsernameElement = document.getElementById('current-username');
+            const debugConsole = document.getElementById('debug-console');
+            
+            initGame();
+            
+            startGameBtn.addEventListener('click', startGame);
+            viewLeaderboardBtn.addEventListener('click', showLeaderboard);
+            closeLeaderboardBtn.addEventListener('click', hideLeaderboard);
+            backToGameBtn.addEventListener('click', hideLeaderboard);
+            restartGameBtn.addEventListener('click', restartGame);
+            leaderboardFromGameBtn.addEventListener('click', () => {
+                hideGameOverModal();
+                showLeaderboard();
+            });
+            newGameBtn.addEventListener('click', confirmNewGame);
+            
+            document.addEventListener('keydown', handleKeyPress);
+            
+            let touchStartX = 0;
+            let touchStartY = 0;
+            let touchEndX = 0;
+            let touchEndY = 0;
+            
+            document.addEventListener('touchstart', (e) => {
+                touchStartX = e.changedTouches[0].screenX;
+                touchStartY = e.changedTouches[0].screenY;
+            }, false);
+            
+            document.addEventListener('touchend', (e) => {
+                touchEndX = e.changedTouches[0].screenX;
+                touchEndY = e.changedTouches[0].screenY;
+                handleSwipe();
+            }, false);
+            
+            function initGame() {
+                bestScoreElement.textContent = bestScore;
+                renderLeaderboard();
+                logToDebug('System initialized. Waiting for user input...');
+            }
+            
+            function startGame() {
+                username = usernameInput.value.trim() || 'anonymous_coder';
+                if (username.length > 15) {
+                    username = username.substring(0, 15) + '...';
+                }
+                
+                currentUsernameElement.textContent = username;
+                usernameModal.classList.add('hidden');
+                gameContainer.classList.remove('hidden');
+                
+                logToDebug(`Welcome, ${username}! Initializing new game...`);
+                logToDebug('Allocating memory for game grid...');
+                
+                resetGame();
+            }
+            
+            function resetGame() {
+                grid = Array(4).fill().map(() => Array(4).fill(0));
+                score = 0;
+                gameOver = false;
+                updateScore();
+                
+                gameGrid.innerHTML = '';
+                
+                for (let i = 0; i < 4; i++) {
+                    for (let j = 0; j < 4; j++) {
+                        const cell = document.createElement('div');
+                        cell.className = 'w-full h-16 md:h-20 bg-gray-700 rounded flex items-center justify-center text-xl font-bold';
+                        gameGrid.appendChild(cell);
+                    }
+                }
+                
+                addRandomTile();
+                addRandomTile();
+                
+                renderGrid();
+                
+                logToDebug('Game grid initialized. Ready to play!');
+                logToDebug('Use arrow keys to move tiles.');
+            }
+            
+            function addRandomTile() {
+                const emptyCells = [];
+                
+                for (let i = 0; i < 4; i++) {
+                    for (let j = 0; j < 4; j++) {
+                        if (grid[i][j] === 0) {
+                            emptyCells.push({i, j});
+                        }
+                    }
+                }
+                
+                if (emptyCells.length > 0) {
+                    const {i, j} = emptyCells[Math.floor(Math.random() * emptyCells.length)];
+                    grid[i][j] = Math.random() < 0.9 ? 2 : 4;
+                    
+                    const cellIndex = i * 4 + j;
+                    const cellElement = gameGrid.children[cellIndex];
+                    cellElement.classList.add('tile-new');
+                    
+                    setTimeout(() => {
+                        cellElement.classList.remove('tile-new');
+                    }, 200);
+                }
+            }
+            
+            function renderGrid() {
+                for (let i = 0; i < 4; i++) {
+                    for (let j = 0; j < 4; j++) {
+                        const cellIndex = i * 4 + j;
+                        const cellElement = gameGrid.children[cellIndex];
+                        const value = grid[i][j];
+                        
+                        cellElement.className = 'w-full h-16 md:h-20 rounded flex items-center justify-center text-xl font-bold';
+                        
+                        if (value === 0) {
+                            cellElement.classList.add('bg-gray-700');
+                            cellElement.textContent = '';
+                        } else {
+                            cellElement.classList.add('bg-gray-600');
+                            
+                            const tileClasses = {
+                                2: 'bg-gray-200 text-gray-800',
+                                4: 'bg-gray-300 text-gray-800',
+                                8: 'bg-yellow-400 text-gray-900',
+                                16: 'bg-yellow-500 text-gray-900',
+                                32: 'bg-red-400 text-white',
+                                64: 'bg-red-500 text-white',
+                                128: 'bg-blue-400 text-white',
+                                256: 'bg-blue-500 text-white',
+                                512: 'bg-purple-400 text-white',
+                                1024: 'bg-purple-500 text-white',
+                                2048: 'bg-green-500 text-white',
+                                4096: 'bg-green-600 text-white',
+                                8192: 'bg-indigo-500 text-white'
+                            };
+                            
+                            const tileClass = tileClasses[value] || 'bg-gray-800 text-white';
+                            cellElement.classList.add(...tileClass.split(' '));
+                            cellElement.textContent = value;
+                            
+                            if (value >= 128) cellElement.classList.add('text-lg');
+                            if (value >= 1024) cellElement.classList.add('text-base');
+                        }
+                    }
+                }
+            }
+            
+            function updateScore() {
+                scoreElement.textContent = score;
+                
+                if (score > bestScore) {
+                    bestScore = score;
+                    bestScoreElement.textContent = bestScore;
+                    localStorage.setItem('bestScore', bestScore);
+                }
+            }
+            
+            function handleKeyPress(e) {
+                if (gameOver) return;
+                
+                let moved = false;
+                
+                switch(e.key) {
+                    case 'ArrowUp':
+                        moved = moveUp();
+                        logToDebug('UP arrow pressed - moving tiles up');
+                        break;
+                    case 'ArrowDown':
+                        moved = moveDown();
+                        logToDebug('DOWN arrow pressed - moving tiles down');
+                        break;
+                    case 'ArrowLeft':
+                        moved = moveLeft();
+                        logToDebug('LEFT arrow pressed - moving tiles left');
+                        break;
+                    case 'ArrowRight':
+                        moved = moveRight();
+                        logToDebug('RIGHT arrow pressed - moving tiles right');
+                        break;
+                    default:
+                        return; 
+                }
+                
+                if (moved) {
+                    addRandomTile();
+                    renderGrid();
+                    
+                    if (isGameOver()) {
+                        gameOver = true;
+                        showGameOverModal();
+                        addToLeaderboard();
+                        logToDebug('Game over! No more valid moves available.');
+                    }
+                }
+            }
+            
+            function handleSwipe() {
+                if (gameOver) return;
+                
+                const dx = touchEndX - touchStartX;
+                const dy = touchEndY - touchStartY;
+                let moved = false;
+                
+                if (Math.abs(dx) > Math.abs(dy)) {
+                    if (dx > 50) {
+                        moved = moveRight();
+                        logToDebug('Swipe RIGHT - moving tiles right');
+                    } else if (dx < -50) {
+                        moved = moveLeft();
+                        logToDebug('Swipe LEFT - moving tiles left');
+                    }
+                } else {
+                    if (dy > 50) {
+                        moved = moveDown();
+                        logToDebug('Swipe DOWN - moving tiles down');
+                    } else if (dy < -50) {
+                        moved = moveUp();
+                        logToDebug('Swipe UP - moving tiles up');
+                    }
+                }
+                
+                if (moved) {
+                    addRandomTile();
+                    renderGrid();
+                    
+                    if (isGameOver()) {
+                        gameOver = true;
+                        showGameOverModal();
+                        addToLeaderboard();
+                        logToDebug('Game over! No more valid moves available.');
+                    }
+                }
+            }
+            
+            function moveUp() {
+                let moved = false;
+                
+                for (let j = 0; j < 4; j++) {
+                    for (let i = 1; i < 4; i++) {
+                        if (grid[i][j] !== 0) {
+                            let row = i;
+                            while (row > 0 && grid[row - 1][j] === 0) {
+                                grid[row - 1][j] = grid[row][j];
+                                grid[row][j] = 0;
+                                row--;
+                                moved = true;
+                            }
+                            
+                            if (row > 0 && grid[row - 1][j] === grid[row][j]) {
+                                grid[row - 1][j] *= 2;
+                                score += grid[row - 1][j];
+                                updateScore();
+                                
+                                const cellIndex = (row - 1) * 4 + j;
+                                gameGrid.children[cellIndex].classList.add('tile-merged');
+                                setTimeout(() => {
+                                    gameGrid.children[cellIndex].classList.remove('tile-merged');
+                                }, 200);
+                                
+                                grid[row][j] = 0;
+                                moved = true;
+                                
+                                if (grid[row - 1][j] === 2048) {
+                                    logToDebug('Congratulations! You reached 2048! Keep going...');
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                return moved;
+            }
+            
+            function moveDown() {
+                let moved = false;
+                
+                for (let j = 0; j < 4; j++) {
+                    for (let i = 2; i >= 0; i--) {
+                        if (grid[i][j] !== 0) {
+                            let row = i;
+                            while (row < 3 && grid[row + 1][j] === 0) {
+                                grid[row + 1][j] = grid[row][j];
+                                grid[row][j] = 0;
+                                row++;
+                                moved = true;
+                            }
+                            
+                            if (row < 3 && grid[row + 1][j] === grid[row][j]) {
+                                grid[row + 1][j] *= 2;
+                                score += grid[row + 1][j];
+                                updateScore();
+                                
+                                const cellIndex = (row + 1) * 4 + j;
+                                gameGrid.children[cellIndex].classList.add('tile-merged');
+                                setTimeout(() => {
+                                    gameGrid.children[cellIndex].classList.remove('tile-merged');
+                                }, 200);
+                                
+                                grid[row][j] = 0;
+                                moved = true;
+                                
+                                if (grid[row + 1][j] === 2048) {
+                                    logToDebug('Congratulations! You reached 2048! Keep going...');
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                return moved;
+            }
+            
+            function moveLeft() {
+                let moved = false;
+                
+                for (let i = 0; i < 4; i++) {
+                    for (let j = 1; j < 4; j++) {
+                        if (grid[i][j] !== 0) {
+                            let col = j;
+                            while (col > 0 && grid[i][col - 1] === 0) {
+                                grid[i][col - 1] = grid[i][col];
+                                grid[i][col] = 0;
+                                col--;
+                                moved = true;
+                            }
+                            
+                            if (col > 0 && grid[i][col - 1] === grid[i][col]) {
+                                grid[i][col - 1] *= 2;
+                                score += grid[i][col - 1];
+                                updateScore();
+                                
+                                const cellIndex = i * 4 + (col - 1);
+                                gameGrid.children[cellIndex].classList.add('tile-merged');
+                                setTimeout(() => {
+                                    gameGrid.children[cellIndex].classList.remove('tile-merged');
+                                }, 200);
+                                
+                                grid[i][col] = 0;
+                                moved = true;
+                                
+                                if (grid[i][col - 1] === 2048) {
+                                    logToDebug('Congratulations! You reached 2048! Keep going...');
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                return moved;
+            }
+            
+            function moveRight() {
+                let moved = false;
+                
+                for (let i = 0; i < 4; i++) {
+                    for (let j = 2; j >= 0; j--) {
+                        if (grid[i][j] !== 0) {
+                            let col = j;
+                            while (col < 3 && grid[i][col + 1] === 0) {
+                                grid[i][col + 1] = grid[i][col];
+                                grid[i][col] = 0;
+                                col++;
+                                moved = true;
+                            }
+                            
+                            if (col < 3 && grid[i][col + 1] === grid[i][col]) {
+                                grid[i][col + 1] *= 2;
+                                score += grid[i][col + 1];
+                                updateScore();
+                                
+                                const cellIndex = i * 4 + (col + 1);
+                                gameGrid.children[cellIndex].classList.add('tile-merged');
+                                setTimeout(() => {
+                                    gameGrid.children[cellIndex].classList.remove('tile-merged');
+                                }, 200);
+                                
+                                grid[i][col] = 0;
+                                moved = true;
+                                
+                                if (grid[i][col + 1] === 2048) {
+                                    logToDebug('Congratulations! You reached 2048! Keep going...');
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                return moved;
+            }
+            
+            function isGameOver() {
+                for (let i = 0; i < 4; i++) {
+                    for (let j = 0; j < 4; j++) {
+                        if (grid[i][j] === 0) {
+                            return false;
+                        }
+                    }
+                }
+                
+                for (let i = 0; i < 4; i++) {
+                    for (let j = 0; j < 4; j++) {
+                        const value = grid[i][j];
+                        
+                        if (j < 3 && grid[i][j + 1] === value) {
+                            return false;
+                        }
+                        
+                        if (i < 3 && grid[i + 1][j] === value) {
+                            return false;
+                        }
+                    }
+                }
+                
+                return true;
+            }
+            
+            function showGameOverModal() {
+                finalScoreElement.textContent = score;
+                gameOverModal.classList.remove('hidden');
+            }
+            
+            function hideGameOverModal() {
+                gameOverModal.classList.add('hidden');
+            }
+            
+            function restartGame() {
+                hideGameOverModal();
+                resetGame();
+                logToDebug('New game started. Good luck!');
+            }
+            
+            function confirmNewGame() {
+                if (confirm('Are you sure you want to start a new game? Your current progress will be lost.')) {
+                    resetGame();
+                    logToDebug('New game started. Good luck!');
+                }
+            }
+            
+            function addToLeaderboard() {
+                leaderboard.push({
+                    username: username,
+                    score: score,
+                    date: new Date().toLocaleDateString()
+                });
+                
+                leaderboard.sort((a, b) => b.score - a.score);
+                
+                if (leaderboard.length > 10) {
+                    leaderboard = leaderboard.slice(0, 10);
+                }
+                
+                localStorage.setItem('leaderboard', JSON.stringify(leaderboard));
+                
+                renderLeaderboard();
+            }
+            
+            function renderLeaderboard() {
+                leaderboardList.innerHTML = '';
+                
+                if (leaderboard.length === 0) {
+                    const emptyMessage = document.createElement('p');
+                    emptyMessage.className = 'text-gray-400 text-center py-4 console-font';
+                    emptyMessage.textContent = 'No records yet. Be the first!';
+                    leaderboardList.appendChild(emptyMessage);
+                    return;
+                }
+                
+                leaderboard.forEach((entry, index) => {
+                    const entryElement = document.createElement('div');
+                    entryElement.className = 'flex justify-between items-center py-2 px-3 border-b border-gray-700';
+                    
+                    const rankElement = document.createElement('span');
+                    rankElement.className = 'font-bold text-yellow-400 console-font';
+                    rankElement.textContent = `#${index + 1}`;
+                    
+                    const nameElement = document.createElement('span');
+                    nameElement.className = 'text-green-400 console-font';
+                    nameElement.textContent = entry.username;
+                    
+                    const scoreElement = document.createElement('span');
+                    scoreElement.className = 'font-bold console-font';
+                    scoreElement.textContent = entry.score;
+                    
+                    const dateElement = document.createElement('span');
+                    dateElement.className = 'text-gray-400 text-sm console-font';
+                    dateElement.textContent = entry.date;
+                    
+                    entryElement.appendChild(rankElement);
+                    entryElement.appendChild(nameElement);
+                    entryElement.appendChild(scoreElement);
+                    entryElement.appendChild(dateElement);
+                    
+                    leaderboardList.appendChild(entryElement);
+                });
+            }
+            
+            function showLeaderboard() {
+                renderLeaderboard();
+                leaderboardModal.classList.remove('hidden');
+                usernameModal.classList.add('hidden');
+                gameOverModal.classList.add('hidden');
+            }
+            
+            function hideLeaderboard() {
+                leaderboardModal.classList.add('hidden');
+                
+                if (username === '') {
+                    usernameModal.classList.remove('hidden');
+                }
+            }
+            
+            function logToDebug(message) {
+                const logEntry = document.createElement('div');
+                logEntry.className = 'console-font';
+                logEntry.textContent = `> ${message}`;
+                debugConsole.appendChild(logEntry);
+                debugConsole.scrollTop = debugConsole.scrollHeight;
+                
+                if (debugConsole.children.length > 50) {
+                    debugConsole.removeChild(debugConsole.children[0]);
+                }
+            }
+        });
+    </script>
+</body>
+</html>
