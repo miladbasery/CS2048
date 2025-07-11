@@ -38,4 +38,8 @@ Welcome to **CS2048** – a browser-based recreation of the famous 2048 puzzle g
 
 ---
 
-## 📁 Project Structure
+## ⚙️ Run Locally
+
+1. Clone the repo:
+  
+   git clone https://github.com/miladbasery/CS2048.git
